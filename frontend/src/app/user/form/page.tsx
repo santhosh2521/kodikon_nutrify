@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useFirebase } from "@/context/Firebase";
+import { useRouter } from 'next/navigation'
 
 const formSchema = z.object({
     name: z.string().nonempty(),
@@ -35,6 +36,7 @@ const commonConditions = [
 
 export default function HealthProfileForm() {
   const firebase = useFirebase();
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -60,7 +62,7 @@ export default function HealthProfileForm() {
   };
 
   firebase.handleAddData(submissionData.name, submissionData.age, submissionData.height, submissionData.weight, submissionData.gender, submissionData.medicalConditions);
-
+    router.push("/user/dashboard");
   }
 
   const addCondition = (condition: string) => {
