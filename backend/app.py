@@ -6,8 +6,17 @@ from msrest.authentication import CognitiveServicesCredentials
 import time
 from groq import Groq
 from pinecone.grpc import PineconeGRPC as Pinecone
+import asyncio
+from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
+import re 
+
+
+class UserInfo(BaseModel):
+    protien: str
+    energy: str
+    carbohydrates: str
 
 load_dotenv()
 
@@ -74,51 +83,69 @@ def query(nutrition_label):
         f'Based on {matched_info}, just return whether a product with nutrients {nutrition_label} '
         f'is safe for a patient with condition {data}. '
         f'Please provide the output in the following JSON format: '
-        f'{{"Nutrients": {{}}, "Notes": []}}. '
-        f'In the "Nutrients" section, list each nutrient present in {nutrition_label} with "yes" or "no" where yes stands for safe and no stands for not safe . '
-        f'In the "Notes" section, provide explanations for each recommendation.'
-        f'No additional texts from your side just json'
+        f'{{"Nutrients": {{}}, "Notes": {{}}}}. '
+        f'In the "Nutrients" section, list each nutrient present in {nutrition_label} with "yes" or "no" where yes stands for safe and no stands for not safe . Give a detailed conclusion based on the nutrition_label in notes and ensure that notes is not empty'
     )
     chat_completion= client.chat.completions.create(
         messages=[{
             "role":"user",
             "content":query,
         }],
+        temperature=0.2,
         model="llama3-8b-8192",
     )
     response_content = chat_completion.choices[0].message.content.strip()
     lines = response_content.splitlines()
     cleaned_response = '\n'.join(lines[2:])
-    query2=f'for the response{cleaned_response} replace any extra data in nutrient section with just yes or no and add a new entry at the end overall safety:yes/no(yes if number of yes is more and no if number of no is more) and return in same format and dont add anything from your side(nothing i need except this) '
+    query2=f'for the response{cleaned_response} replace any extra data in nutrient section with just yes or no and add a new entry at the end overall rating out of hundred and give the permissible consumption quantity for a packet of the food product return in same format and do not add anything and give only json '
     chat2=client.chat.completions.create(
         messages=[{
             "role":"user",
             "content":query2,
         }],
+        temperature=0.1,
         model="llama3-8b-8192",
     )
     resp=chat2.choices[0].message.content.strip()
     line=resp.splitlines()
     cp='\n'.join(line[2:])
     
+    
+    
     return cp
 
+def recommend(chat):
+    product = "chips"
+    query3=f'{chat} if overall rating is <50, then for this lays {product}, give 2 healthier alternative food products with brief description (max 15 words) as to why it is better, else dont give any recommendation whatsoever '
+    chat3=client.chat.completions.create(
+        messages=[{
+            "role":"user",
+            "content":query3,
+        }],
+        temperature=0.1,
+        model="llama3-8b-8192",
+    )
+    resp3=chat3.choices[0].message.content.strip()
+    line3=resp3.splitlines()
+    cp3='\n'.join(line3[2:])
 
-@app.route('/extract', methods=['POST','GET'])
-def extract():
+    return cp3
+
+@app.route('/extract_nutrition_label', methods=['POST'])
+def extract_nutrition_label():
     if 'image' not in request.files:
         return jsonify({"error": "No file provided"}), 400
 
     image_file = request.files['image']
-    print("received image")
     try:
         
         nutrition_label =  extract_and_format_nutrition_label(image_file.stream)
-        print("OCR complete")
         if nutrition_label:
             chat= query(nutrition_label)
-            print("Response is ",chat)
-            return jsonify({"Chat": chat})
+            recomend = recommend(chat)
+            out=chat+recomend
+            f_out=re.sub(r'`+', '', out)
+            return jsonify({"Chat": f_out})
         else:
             
             return jsonify({"error": "Failed to extract text"}), 500
