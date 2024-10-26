@@ -62,7 +62,7 @@ export default function SignupPage() {
   }
 
   if(firebase.isLoggedIn) {
-    router.push("/")
+    router.push("/dashboard")
   }
 
   return (

@@ -62,7 +62,7 @@ export default function HealthProfileForm() {
   };
 
   firebase.handleAddData(submissionData.name, submissionData.age, submissionData.height, submissionData.weight, submissionData.gender, submissionData.medicalConditions);
-    router.push("/user/dashboard");
+    router.push("/dashboard");
   }
 
   const addCondition = (condition: string) => {

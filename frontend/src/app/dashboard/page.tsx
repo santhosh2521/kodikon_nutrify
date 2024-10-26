@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Camera, Plus } from 'lucide-react'
+import { useRouter } from "next/navigation";
 
 // Mock data for demonstration
 const mockHistory = [
@@ -18,18 +19,22 @@ const mockHistory = [
 ]
 
 export default function Dashboard() {
+  const router = useRouter();
   const [selectedProduct, setSelectedProduct] = useState(null)
 
   const openProductModal = (product) => {
     setSelectedProduct(product)
   }
 
+  const handleNavigateToCamera = () => {
+    router.push("/camera");
+  };
+
   return (
     <div className="container mx-auto p-4 space-y-8">
       <Card>
         <CardHeader>
           <CardTitle>Your Profile</CardTitle>
-          <CardDescription>Click the picture to update your profile for personalized recommendations</CardDescription>
         </CardHeader>
         <CardContent className="flex items-center space-x-4">
           <Avatar className="h-24 w-24 cursor-pointer">
@@ -44,9 +49,9 @@ export default function Dashboard() {
       </Card>
 
       <div className="flex justify-center space-x-4">
-        <Button variant="outline" size="icon">
-          <Camera className="h-6 w-6" />
-        </Button>
+      <Button variant="outline" size="icon" onClick={handleNavigateToCamera}>
+      <Camera className="h-6 w-6" />
+    </Button>
         <Button>
           <Plus className="mr-2 h-4 w-4" /> Add Picture
         </Button>

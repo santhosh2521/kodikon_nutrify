@@ -26,7 +26,7 @@ export default function HomePage() {
                 Instantly analyze nutrition labels for healthier choices.
               </p>
               <div className="space-x-4">
-                <Button size="lg">Get Started</Button>
+                <Button size="lg" >Get Started</Button>
                 <Button size="lg" variant="outline">
                   Learn More
                 </Button>

@@ -39,11 +39,11 @@ export default function SignupPage() {
 
   const handleGoogleLogin = () => {
     const result = firebase.signinWithGoogle();
-    router.push('/user/dashboard');
+    router.push('/dashboard');
   }
 
   if(firebase.isLoggedIn) {
-    router.push("/")
+    router.push("/dashboard")
   }
 
   return (
