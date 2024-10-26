@@ -89,7 +89,7 @@ def query(nutrition_label):
     response_content = chat_completion.choices[0].message.content.strip()
     lines = response_content.splitlines()
     cleaned_response = '\n'.join(lines[2:])
-    query2=f'for the response{cleaned_response} replace any extra data in nutrient section with just yes or no and add a new entry at the end overall safety:yes/no(yes if number of yes is more and no if number of no is more) and return in same format and dont add anything from your side '
+    query2=f'for the response{cleaned_response} replace any extra data in nutrient section with just yes or no and add a new entry at the end overall safety:yes/no(yes if number of yes is more and no if number of no is more) and return in same format and dont add anything from your side(nothing i need except this) '
     chat2=client.chat.completions.create(
         messages=[{
             "role":"user",
@@ -103,17 +103,21 @@ def query(nutrition_label):
     
     return cp
 
-@app.route('/extract_nutrition_label', methods=['POST'])
-def extract_nutrition_label():
+
+@app.route('/extract', methods=['POST','GET'])
+def extract():
     if 'image' not in request.files:
         return jsonify({"error": "No file provided"}), 400
 
     image_file = request.files['image']
+    print("received image")
     try:
         
         nutrition_label =  extract_and_format_nutrition_label(image_file.stream)
+        print("OCR complete")
         if nutrition_label:
             chat= query(nutrition_label)
+            print("Response is ",chat)
             return jsonify({"Chat": chat})
         else:
             
@@ -123,4 +127,4 @@ def extract_nutrition_label():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
