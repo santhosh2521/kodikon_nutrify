@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
 import re 
+import json
 
 
 class UserInfo(BaseModel):
@@ -84,14 +85,14 @@ def query(nutrition_label):
         f'is safe for a patient with condition {data}. '
         f'Please provide the output in the following JSON format: '
         f'{{"Nutrients": {{}}, "Notes": {{}}}}. '
-        f'In the "Nutrients" section, list each nutrient present in {nutrition_label} with "yes" or "no" where yes stands for safe and no stands for not safe . Give a detailed conclusion based on the nutrition_label in notes and ensure that notes is not empty'
+        f'In the "Nutrients" section, list each nutrient present in {nutrition_label} with "yes" or "no" where yes stands for safe and no stands for not safe in lower case always with not even the first letter as caps. Give a detailed conclusion based on the nutrition_label in notes and ensure that notes is not empty'
     )
     chat_completion= client.chat.completions.create(
         messages=[{
             "role":"user",
             "content":query,
         }],
-        temperature=0.2,
+        temperature=0.1,
         model="llama3-8b-8192",
     )
     response_content = chat_completion.choices[0].message.content.strip()
@@ -109,14 +110,12 @@ def query(nutrition_label):
     resp=chat2.choices[0].message.content.strip()
     line=resp.splitlines()
     cp='\n'.join(line[2:])
-    
-    
-    
+
     return cp
 
 def recommend(chat):
     product = "chips"
-    query3=f'{chat} if overall rating is <50, then for this lays {product}, give 2 healthier alternative food products with brief description (max 15 words) as to why it is better, else dont give any recommendation whatsoever '
+    query3=f'{chat} if overall rating is <60, then for this lays {product}, give 2 healthier alternative food products with brief description (max 15 words) as to why it is better, else dont give any recommendation whatsoever '
     chat3=client.chat.completions.create(
         messages=[{
             "role":"user",
@@ -131,6 +130,17 @@ def recommend(chat):
 
     return cp3
 
+
+
+def extract_nutrients_section(data_string):
+    # Use regular expression to find the "Nutrients" section
+    match = re.search(r'"Nutrients": \{(.*?)\},\s*"Notes":', data_string, re.DOTALL)
+    if match:
+        nutrients_content = match.group(1)
+        return "{" + nutrients_content + "}"
+    else:
+        return "Nutrients section not found"
+    
 @app.route('/extract_nutrition_label', methods=['POST'])
 def extract_nutrition_label():
     if 'image' not in request.files:
@@ -142,16 +152,17 @@ def extract_nutrition_label():
         nutrition_label =  extract_and_format_nutrition_label(image_file.stream)
         if nutrition_label:
             chat= query(nutrition_label)
-            recomend = recommend(chat)
-            out=chat+recomend
-            f_out=re.sub(r'`+', '', out)
-            return jsonify({"Chat": f_out})
+            print(type(chat))
+            out = extract_nutrients_section(chat)
+            out.strip()
+            json_obj = json.loads(out)
+            print(type(json_obj))
+            #return json.dumps(json_obj)
+            return {"Chat":out}
         else:
-            
             return jsonify({"error": "Failed to extract text"}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
