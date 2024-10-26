@@ -151,8 +151,8 @@ export const FirebaseProvider = (props)=>{
             });
 
             //console.log("Image uploaded successfully:", imageURL);
-            console.log("image uploaded is",image);
-            //return { success: true, imageURL, docId: result.id };
+            //console.log("image uploaded is",image);
+            return imageURL;
         } else {
             throw new Error("User document not found");
         }

@@ -7,6 +7,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input" 
 import { Camera, X, Check } from 'lucide-react'
 import { useFirebase } from '@/context/Firebase'
+import { set } from 'react-hook-form'
 
 export default function CameraCapture() {
   const webcamRef = useRef<Webcam>(null)
@@ -34,13 +35,13 @@ export default function CameraCapture() {
     
      const result = firebase.uploadImage(capturedImage, itemName);
      if(result){
-        
-     }
-    console.log("Result is ",result);
-     // const data = firebase.fetchUserDetails();
-    // const imageURL = firebase.image;
-    //  console.log(data, imageURL);
-    // router.push('/analysis');
+        firebase.setImage(result);
+     } else {
+        console.error("Image upload failed");
+    }
+    //console.log("Result is ",result);
+     setInterval(()=>(router.push('/analysis')), 2000);
+    
   }
 
   return (

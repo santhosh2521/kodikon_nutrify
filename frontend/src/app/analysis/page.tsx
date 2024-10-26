@@ -28,6 +28,34 @@ type AnalysisProps = {
   };
 }
 
+export default function Analysis() {
+    const [data, setData] = useState<AnalysisData>({
+      "Nutrients": {
+        "Energy": "yes",
+        "Protein": "yes",
+        "Carbohydrate": "yes",
+        "Total Sugars": "yes",
+        "Added Sugars": "yes",
+        "Total Fat": "no",
+        "Saturated Fat": "no",
+        "Trans Fat": "yes",
+        "Sodium": "no",
+        "Overall Rating": "40"
+      },
+      "Notes": {
+        "Conclusion": "This product is not suitable for a patient with Diabetes, Hyperlipidemia, or Heart Disease due to its high levels of Total Fat (35.1g), Saturated Fat (6.2g), and Sodium (510mg). Additionally, it does not meet the recommended daily intake of Carbohydrates (52.6g per 100g). However, it is a good source of Protein and has no added sugars. Patients with Diabetes should be cautious due to the presence of Total Sugars (0.6g) and Carbohydrates, which may exceed their daily limits. Patients with Hyperlipidemia or Heart Disease should avoid this product due to its high levels of Saturated Fat and Sodium."
+      }
+    })
+    const [prompt, setPrompt] = useState('')
+  
+    const handlePromptSubmit = (e: React.FormEvent) => {
+      e.preventDefault()
+      // Here you would typically send the prompt to your API
+      console.log('Submitted prompt:', prompt)
+      // Reset the prompt input
+      setPrompt('')
+    }
+  
 export default function Analysis({ imageURL, userDetails }: AnalysisProps) {
     const firebase = useFirebase();
   const [data, setData] = useState<AnalysisData | null>(null)
