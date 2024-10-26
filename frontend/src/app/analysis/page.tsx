@@ -38,12 +38,35 @@ export default function Analysis() {
   })
   const [prompt, setPrompt] = useState('');
 
-  useEffect(()=>{
-    // fetch the analysis data from the API
-    const data = firebase.fetchUserDetails();
-    const imageURL = firebase.image;
-     console.log(data, imageURL);
-  },[])
+  useEffect(() => {
+    const fetchData = async () => {
+        const fetchedData = await firebase.fetchUserDetails();
+        const fetchedImageURL = firebase.image;
+        console.log(fetchedData, fetchedImageURL);
+        
+        // Send data to backend when fetched
+        await sendDataToBackend(fetchedData, fetchedImageURL);
+    };
+    
+    fetchData();
+}, []);
+
+const sendDataToBackend = async (data, imageURL) => {
+  try {
+      const response = await fetch('http://192.168.78.196:5000/extract_nutrition_label', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ data, imageURL }),
+      });
+      console.log("Sent data:",JSON.stringify({ data, imageURL }));
+      const result = await response.json();
+      console.log('Response from backend:', result);
+  } catch (error) {
+      console.error('Error sending data to backend:', error);
+  }
+};
 
   const handlePromptSubmit = (e: React.FormEvent) => {
     e.preventDefault()

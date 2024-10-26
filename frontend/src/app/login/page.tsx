@@ -34,7 +34,7 @@ export default function SignupPage() {
     e.preventDefault()
     const result = await firebase.siginUserWithEmailAndPassword(formData.email,formData.password);
     console.log("succesfully logged in the user",result);
-    router.push('/user/dashboard');
+    router.push('/dashboard');
   }
 
   const handleGoogleLogin = () => {

@@ -1,91 +1,151 @@
-"use client"
-import React, { useRef, useState, useCallback } from 'react'
+'use client'
+
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Webcam from 'react-webcam'
+import axios from 'axios'
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input" 
-import { Camera, X, Check } from 'lucide-react'
-import { useFirebase } from '@/context/Firebase'
-import { set } from 'react-hook-form'
+import { Badge } from "@/components/ui/badge"
+import { Upload, Camera } from 'lucide-react'
 
-export default function CameraCapture() {
-  const webcamRef = useRef<Webcam>(null)
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [itemName, setItemName] = useState<string>("");
+interface NutrientEvaluation {
+  [key: string]: string
+}
+
+interface EvaluationData {
+  Nutrients: NutrientEvaluation
+  Notes?: string[]
+  "Overall Safety"?: string
+  OverallRating?: number
+  PermissibleConsumptionQuantity?: string
+  alternatives?: string
+}
+
+export default function NutritionLabelAnalyzer() {
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [extractedText, setExtractedText] = useState('');
+  const [evaluationData, setEvaluationData] = useState<EvaluationData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const firebase = useFirebase();
 
-  const capture = useCallback(() => {
-    const imageSrc = webcamRef.current?.getScreenshot();
-    if (imageSrc) {
-      setCapturedImage(imageSrc);
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImage(file);
+      setImagePreview(URL.createObjectURL(file));
+      setExtractedText('');
+      setEvaluationData(null);
+      setError(null);
     }
-  }, [webcamRef]);
+  };
 
-  const retake = () => {
-    setCapturedImage(null);
-    setItemName("");
-  }
-
-  const accept = () => {
-    // Here you might want to send the image and item name to your server
-    //console.log("Image URL:", capturedImage);
-    //console.log("Item Name:", itemName);
-    
-     const result = firebase.uploadImage(capturedImage, itemName);
-     if(result){
-        firebase.setImage(result);
-     } else {
-        console.error("Image upload failed");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!image) {
+      setError('Please select an image first');
+      return;
     }
-    //console.log("Result is ",result);
-     setInterval(()=>(router.push('/analysis')), 2000);
-    
-  }
+
+    const formData = new FormData();
+    formData.append('image', image);
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await axios.post('http://localhost:5000/extract_nutrition_label', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      
+      const nutrients = JSON.parse(response.data.Chat);
+      setExtractedText(JSON.stringify(nutrients, null, 2));
+      setEvaluationData({ Nutrients: nutrients });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setError('Failed to analyze the image. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderEvaluation = () => {
+    if (!evaluationData) return null;
+
+    return (
+      <div className="space-y-6 mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Nutrition Evaluation</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Nutrients</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(evaluationData.Nutrients).map(([nutrient, value]) => (
+                    <div key={nutrient} className="flex items-center justify-between">
+                      <span className="text-sm">{nutrient}</span>
+                      <Badge variant={value === 'yes' ? 'default' : 'destructive'}>
+                        {value === 'yes' ? 'Safe' : 'Unsafe'}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-2xl mx-auto">
       <CardContent className="p-6">
-        {!capturedImage ? (
-          <div className="relative">
-            <Webcam
-              audio={false}
-              ref={webcamRef}
-              screenshotFormat="image/jpeg"
-              videoConstraints={{ facingMode: 'environment' }}
-              className="w-full rounded-lg"
-            />
-            <Button 
-              onClick={capture}
-              className="absolute bottom-4 left-1/2 transform -translate-x-1/2"
-              size="icon"
-            >
-              <Camera className="h-6 w-6" />
-            </Button>
-          </div>
-        ) : (
-          <div className="relative">
-            <img src={capturedImage} alt="captured" className="w-full rounded-lg" />
+        <h1 className="text-2xl font-bold mb-4">Nutrition Label Analyzer</h1>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
             <Input
-              placeholder="Enter item name"
-              value={itemName}
-              onChange={(e) => setItemName(e.target.value)}
-              className="mt-4"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
+              id="image-upload"
             />
+            <label htmlFor="image-upload" className="w-full h-32 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer">
+              <div className="text-center">
+                {imagePreview ? (
+                  <Camera className="mx-auto h-8 w-8 text-gray-400" />
+                ) : (
+                  <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                )}
+                <span className="mt-2 block text-sm font-medium text-gray-900">
+                  {imagePreview ? 'Change image' : 'Upload a nutrition label image'}
+                </span>
+              </div>
+            </label>
+          </div>
+          {imagePreview && (
+            <div className="mt-4 mb-4">
+              <img src={imagePreview} alt="Preview" className="w-full rounded-lg" />
+            </div>
+          )}
+          <Button type="submit" className="w-full" disabled={loading || !image}>
+            {loading ? 'Analyzing...' : 'Analyze Label'}
+          </Button>
+        </form>
+        {error && <p className="text-red-500 mt-4">{error}</p>}
+        {extractedText && (
+          <div className="mt-4 p-4 bg-background rounded-lg shadow">
+            <h2 className="text-xl font-bold mb-2">Extracted Text</h2>
+            <pre className="text-sm whitespace-pre-wrap">{extractedText}</pre>
           </div>
         )}
+        {renderEvaluation()}
       </CardContent>
-      {capturedImage && (
-        <CardFooter className="flex justify-center space-x-4">
-          <Button onClick={retake} variant="outline" size="icon">
-            <X className="h-6 w-6" />
-          </Button>
-          <Button onClick={accept} size="icon" disabled={!itemName}>
-            <Check className="h-6 w-6" />
-          </Button>
-        </CardFooter>
-      )}
     </Card>
   )
 }
